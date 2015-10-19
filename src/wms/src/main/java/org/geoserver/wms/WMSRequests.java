@@ -1,12 +1,15 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
 package org.geoserver.wms;
 
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Array;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -210,7 +213,7 @@ public class WMSRequests {
      * 
      * @return The full url for a getMap request.
      */
-    public static String getGetLegendGraphicUrl(WMSRequest req, Layer layer, String[] kvp) {
+    public static String getGetLegendGraphicUrl(WMSRequest req, Layer[] layers, String[] kvp) {
         // parameters
         HashMap<String,String> params = new HashMap<String,String>();
 
@@ -218,8 +221,8 @@ public class WMSRequests {
         params.put("request", "GetLegendGraphic");
         params.put("version", "1.1.1");
         params.put("format", "image/png");
-        params.put("layer", layer.getTitle());
-        params.put("style", layer.getStyle().getName());
+        params.put("layer", getLayerTitles(layers));
+        params.put("style", getLayerStyles(layers));
         params.put("height", "20");
         params.put("width", "20");
 
@@ -229,6 +232,25 @@ public class WMSRequests {
         }
 
         return ResponseUtils.buildURL(req.getBaseUrl(), "wms", params, URLType.SERVICE);
+    }
+
+    private static String getLayerTitles(Layer[] layers) {
+        StringBuilder sb = new StringBuilder();
+        for (Layer layer : layers) {
+            if(layer != null && layer.getTitle() != null) {
+                sb.append(layer.getTitle());  
+            }
+            sb.append(",");
+        }
+        return sb.substring(0, sb.length() - 1);
+    }
+    
+    private static String getLayerStyles(Layer[] layers) {
+        StringBuilder sb = new StringBuilder();
+        for (Layer layer : layers) {
+            sb.append(layer.getStyle().getName()).append(",");
+        }
+        return sb.substring(0, sb.length() - 1);
     }
 
     /**
@@ -325,6 +347,15 @@ public class WMSRequests {
                 // semantics of feature id slightly different, replicate entire value
                 params.put("featureid", req.getRawKvp().get("featureid"));
             }
+            // Jira: #GEOS-6411: adding time and elevation support in case of a timeserie layer
+            if (req.getRawKvp().get("time") != null) {
+              // semantics of feature id slightly different, replicate entire value
+              params.put("time", req.getRawKvp().get("time"));
+            } 
+            if (req.getRawKvp().get("elevation") != null) {
+              // semantics of feature id slightly different, replicate entire value
+              params.put("elevation", req.getRawKvp().get("elevation"));
+            }
 
         } else {
             // include all
@@ -370,7 +401,15 @@ public class WMSRequests {
         }
         
         if (req.getSld() != null) {
-            params.put("sld", req.getSld().toString());
+            // the request encoder will url-encode the url, if it has already url encoded
+            // chars, the will be encoded twice
+            try {
+                String sld = URLDecoder.decode(req.getSld().toExternalForm(), "UTF-8");
+                params.put("sld", sld);
+            } catch (UnsupportedEncodingException e) {
+                // this should really never happen
+                throw new RuntimeException(e);
+            }
         }
         
         if (req.getSldBody() != null) {
@@ -490,7 +529,9 @@ public class WMSRequests {
             sb.append(";");
         }
 
-        sb.setLength(sb.length());
+        if(sb.length() > 0) {
+            sb.setLength(sb.length() - 1);
+        }
     }
 
     /**

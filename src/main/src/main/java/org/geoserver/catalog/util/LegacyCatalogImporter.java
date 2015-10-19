@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -27,7 +28,9 @@ import org.geoserver.catalog.LegendInfo;
 import org.geoserver.catalog.MetadataLinkInfo;
 import org.geoserver.catalog.NamespaceInfo;
 import org.geoserver.catalog.ProjectionPolicy;
+import org.geoserver.catalog.ResourceInfo;
 import org.geoserver.catalog.StyleInfo;
+import org.geoserver.catalog.PublishedType;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.data.util.CoverageStoreUtils;
 import org.geoserver.platform.GeoServerResourceLoader;
@@ -167,7 +170,7 @@ public class LegacyCatalogImporter {
                 if ( layer.getPath() == null ) {
                     layer.setPath( "/" );
                 }
-                layer.setType(LayerInfo.Type.VECTOR);
+                layer.setType(PublishedType.VECTOR);
                
                 String defaultStyleName = ftInfoReader.defaultStyle();
                 if ( defaultStyleName != null ) {
@@ -240,7 +243,7 @@ public class LegacyCatalogImporter {
                 if ( layer.getPath() == null ) {
                     layer.setPath( "/" );
                 }
-                layer.setType(LayerInfo.Type.RASTER);
+                layer.setType(PublishedType.RASTER);
                 
                 String defaultStyleName = cInfoReader.defaultStyle();
                 if ( defaultStyleName != null ) {
@@ -451,8 +454,8 @@ public class LegacyCatalogImporter {
         featureType.setMaxFeatures(ftInfoReader.maxFeatures());
         featureType.getMetadata().put( "dirName", ftInfoReader.parentDirectoryName() );
         featureType.getMetadata().put( "indexingEnabled", ftInfoReader.searchable() );
-        featureType.getMetadata().put( "cachingEnabled", ftInfoReader.cachingEnabled() );
-        featureType.getMetadata().put( "cacheAgeMax", ftInfoReader.cacheAgeMax() );
+        featureType.getMetadata().put( ResourceInfo.CACHING_ENABLED, ftInfoReader.cachingEnabled() );
+        featureType.getMetadata().put( ResourceInfo.CACHE_AGE_MAX, ftInfoReader.cacheAgeMax() );
         featureType.getMetadata().put( "kml.regionateAttribute", ftInfoReader.regionateAttribute() );
         featureType.getMetadata().put( "kml.regionateStrategy", ftInfoReader.regionateStrategy() );
         featureType.getMetadata().put( "kml.regionateFeatureLimit", ftInfoReader.regionateFeatureLimit());

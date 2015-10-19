@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -47,7 +48,7 @@ public class GeoServerErrorPage extends GeoServerBasePage {
         wmc.setVisible(trace);
         wmc.add(new ExternalLink(
                     "jiraLink", 
-                    new Model("http://jira.codehaus.org/browse/GEOS/"),
+                    new Model("https://osgeo-org.atlassian.net/projects/GEOS"),
                     new ResourceModel("GeoServerErrorPage.jiraName")
                     ).setVisible(trace)
        );

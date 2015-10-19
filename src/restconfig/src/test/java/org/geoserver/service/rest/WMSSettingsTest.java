@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -71,7 +72,7 @@ public class WMSSettingsTest extends CatalogRESTTestSupport {
                 + "<id>wms</id>"
                 + "<enabled>false</enabled>"
                 + "<name>WMS</name><title>GeoServer Web Map Service</title>"
-                + "<maintainer>http://jira.codehaus.org/secure/BrowseProject.jspa?id=10311</maintainer>"
+                + "<maintainer>http://geoserver.org/comm</maintainer>"
                 + "</wms>";
         MockHttpServletResponse response = putAsServletResponse("/rest/services/wms/settings", xml,
                 "text/xml");

@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 - 2015 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -51,8 +52,6 @@ import org.geoserver.platform.GeoServerResourceLoader;
 import org.geotools.util.logging.Logging;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
-import org.springframework.web.context.WebApplicationContext;
-import org.vfny.geoserver.global.GeoserverDataDirectory;
 
 /**
  * Initializes GeoServer configuration and catalog on startup.
@@ -82,7 +81,6 @@ public abstract class GeoServerLoader {
     
     public void setApplicationContext(ApplicationContext applicationContext)
             throws BeansException {
-        GeoserverDataDirectory.init((WebApplicationContext)applicationContext);
     }
     
     public void setXStreamPeristerFactory(XStreamPersisterFactory xpf) {
@@ -152,8 +150,7 @@ public abstract class GeoServerLoader {
                 initer.initialize( geoServer );
             }
             catch( Throwable t ) {
-                //TODO: log this
-                t.printStackTrace();
+                LOGGER.log(Level.SEVERE, "Failed to run initializer " + initer, t);
             }
         }
     }
@@ -169,11 +166,14 @@ public abstract class GeoServerLoader {
         if ( catalog.getStyleByName( StyleInfo.DEFAULT_LINE ) == null ) {
             initializeStyle( catalog, StyleInfo.DEFAULT_LINE, "default_line.sld" );
         }
-        if ( catalog.getStyleByName( StyleInfo.DEFAULT_POLYGON ) == null ) {
-            initializeStyle( catalog, StyleInfo.DEFAULT_POLYGON, "default_line.sld" );
+        if ( catalog.getStyleByName( StyleInfo.DEFAULT_POLYGON ) == null ) {    
+            initializeStyle( catalog, StyleInfo.DEFAULT_POLYGON, "default_polygon.sld" );
         }
         if ( catalog.getStyleByName( StyleInfo.DEFAULT_RASTER ) == null ) {
             initializeStyle( catalog, StyleInfo.DEFAULT_RASTER, "default_raster.sld" );
+        }
+        if (catalog.getStyleByName(StyleInfo.DEFAULT_GENERIC) == null) {
+            initializeStyle(catalog, StyleInfo.DEFAULT_GENERIC, "default_generic.sld");
         }
     }
     
@@ -243,9 +243,10 @@ public abstract class GeoServerLoader {
      * Reads the catalog from disk.
      */
     Catalog readCatalog( XStreamPersister xp ) throws Exception {
-        Catalog catalog = new CatalogImpl();
+        CatalogImpl catalog = new CatalogImpl();
         catalog.setResourceLoader(resourceLoader);
         xp.setCatalog( catalog );
+        xp.setUnwrapNulls(false);
         
         CatalogFactory factory = catalog.getFactory();
        
@@ -303,7 +304,7 @@ public abstract class GeoServerLoader {
                 }
                 
                 //set the default workspace, this value might be null in the case of coming from a 
-                // 2.0.0 data directory. See http://jira.codehaus.org/browse/GEOS-3440
+                // 2.0.0 data directory. See https://osgeo-org.atlassian.net/browse/GEOS-3440
                 if (defaultWorkspace != null ) {
                     if (ws.getName().equals(defaultWorkspace.getName())) {
                         catalog.setDefaultWorkspace(ws);
@@ -374,13 +375,12 @@ public abstract class GeoServerLoader {
                                 FeatureTypeInfo ft = null;
                                 try {
                                     ft = depersist(xp,f,FeatureTypeInfo.class);
+                                    catalog.add(ft);
                                 }
                                 catch( Exception e ) {
                                     LOGGER.log( Level.WARNING, "Failed to load feature type '" + ftd.getName() +"'", e);
                                     continue;
                                 }
-                                
-                                catalog.add( ft );
                                 
                                 LOGGER.info( "Loaded feature type '" + ds.getName() +"'");
                                 
@@ -497,7 +497,7 @@ public abstract class GeoServerLoader {
                                         LOGGER.warning( "Ignoring coverage directory " + cd.getAbsolutePath() );
                                     }
                                 }
-                            } else {
+                            } else if(!isConfigDirectory(sd)) {
                                 LOGGER.warning( "Ignoring store directory '" + sd.getName() +  "'");
                                 continue;
                             }
@@ -523,10 +523,24 @@ public abstract class GeoServerLoader {
         if ( layergroups != null ) {
            loadLayerGroups(layergroups, catalog, xp);
         }
-
+        xp.setUnwrapNulls(true);
+        catalog.resolve();
         return catalog;
     }
     
+    /**
+     * Some config directories in GeoServer are used to store workspace specific configurations, 
+     * identify them so that we don't log complaints about their existence
+     *  
+     * @param f
+     * @return
+     */
+    private boolean isConfigDirectory(File dir) {
+        String name = dir.getName();
+        boolean result = "styles".equals(name) || "layergroups".equals(name);
+        return result;
+    }
+
     /**
      * Reads the legacy (1.x) catalog from disk.
      */
@@ -707,8 +721,17 @@ public abstract class GeoServerLoader {
                 LOGGER.info( "Loaded service '" +  s.getId() + "', " + (s.isEnabled()?"enabled":"disabled") );
             }
             catch( Throwable t ) {
-                //TODO: log this
-                t.printStackTrace();
+                if (directory != null) {
+                    LOGGER.log(Level.SEVERE,
+                            "Failed to load the service configuration in directory: " + directory
+                                    + " with loader for " + l.getServiceClass(),
+                            t);
+                } else {
+                    LOGGER.log(
+                            Level.SEVERE,
+                            "Failed to load the root service configuration with loader for "
+                                    + l.getServiceClass(), t);
+                }
             }
         }
     }

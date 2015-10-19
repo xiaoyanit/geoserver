@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -68,7 +69,7 @@ public class WFSSettingsTest extends CatalogRESTTestSupport {
                 + "<id>wfs</id>"
                 + "<enabled>disabled</enabled>"
                 + "<name>WFS</name><title>GeoServer Web Feature Service</title>"
-                + "<maintainer>http://jira.codehaus.org/secure/BrowseProject.jspa?id=10311</maintainer>"
+                + "<maintainer>http://geoserver.org/comm</maintainer>"
                 + "</wfs>";
         MockHttpServletResponse response = putAsServletResponse("/rest/services/wfs/settings", xml,
                 "text/xml");

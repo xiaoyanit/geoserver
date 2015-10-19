@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -7,7 +8,6 @@ package org.geoserver.wms.web.data;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.logging.Level;
-
 import org.apache.wicket.PageParameters;
 import org.apache.wicket.WicketRuntimeException;
 import org.apache.wicket.behavior.AbstractBehavior;
@@ -71,6 +71,10 @@ public class StyleEditPage extends AbstractStylePage {
             //always disable the workspace toggle
             f.get("workspace").setEnabled(false);
         }
+
+        // format only settable upon creation
+        formatChoice.setEnabled(false);
+        formatReadOnlyMessage.setVisible(true);
     }
     
     public StyleEditPage(StyleInfo style) {
@@ -83,13 +87,22 @@ public class StyleEditPage extends AbstractStylePage {
         // write out the file and save name modifications
         try {
             StyleInfo style = (StyleInfo) styleForm.getModelObject();
-            Version version = Styles.findVersion(new ByteArrayInputStream(rawSLD.getBytes()));
+            String format = formatChoice.getModelObject();
+            style.setFormat(format);
+            Version version = Styles.handler(format).version(rawStyle);
             style.setSLDVersion(version);
             
+            // make sure the legend is null if there is no URL
+            if (null == style.getLegend()
+                    || null == style.getLegend().getOnlineResource()
+                    || style.getLegend().getOnlineResource().isEmpty()) {
+                style.setLegend(null);
+            }
+
             // write out the SLD
             try {
                 getCatalog().getResourcePool().writeStyle(style,
-                        new ByteArrayInputStream(rawSLD.getBytes()));
+                        new ByteArrayInputStream(rawStyle.getBytes()));
             } catch (IOException e) {
                 throw new WicketRuntimeException(e);
             }

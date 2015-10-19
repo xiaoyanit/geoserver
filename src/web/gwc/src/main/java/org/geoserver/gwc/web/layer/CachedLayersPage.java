@@ -1,10 +1,12 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
 package org.geoserver.gwc.web.layer;
 
 import static org.geoserver.gwc.web.layer.CachedLayerProvider.ACTIONS;
+import static org.geoserver.gwc.web.layer.CachedLayerProvider.BLOBSTORE;
 import static org.geoserver.gwc.web.layer.CachedLayerProvider.ENABLED;
 import static org.geoserver.gwc.web.layer.CachedLayerProvider.NAME;
 import static org.geoserver.gwc.web.layer.CachedLayerProvider.PREVIEW_LINKS;
@@ -104,6 +106,8 @@ public class CachedLayersPage extends GeoServerSecuredPage {
                     return previewLinks(id, itemModel);
                 } else if (property == ACTIONS) {
                     return actionsLinks(id, itemModel);
+                } else if (property == BLOBSTORE) {
+                    return null;
                 }
 
                 throw new IllegalArgumentException("Don't know a property named "

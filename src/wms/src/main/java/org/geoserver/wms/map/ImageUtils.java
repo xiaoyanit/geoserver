@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -103,7 +104,7 @@ public class ImageUtils {
         if (palette != null) {
             // unfortunately we can't use packed rasters because line rendering
             // gets completely
-            // broken, see GEOS-1312 (http://jira.codehaus.org/browse/GEOS-1312)
+            // broken, see GEOS-1312 (https://osgeo-org.atlassian.net/browse/GEOS-1312)
             // final WritableRaster raster =
             // palette.createCompatibleWritableRaster(width, height);
             final WritableRaster raster = Raster.createInterleavedRaster(palette.getTransferType(),

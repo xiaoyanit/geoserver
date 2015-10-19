@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -36,6 +37,11 @@ import com.mockrunner.mock.web.MockHttpServletResponse;
 
 public class DescribeFeatureTypeTest extends WFS20TestSupport {
 	
+    @Override
+    protected String getLogConfiguration() {
+        return "/DEFAULT_LOGGING.properties";
+    }
+    
 	@Override
     protected void setUpInternal(SystemTestData dataDirectory) throws Exception {
     	DataStoreInfo di = getCatalog().getDataStoreByName(CiteTestData.CITE_PREFIX);
@@ -154,7 +160,7 @@ public class DescribeFeatureTypeTest extends WFS20TestSupport {
     }
 
     /**
-     * See http://jira.codehaus.org/browse/GEOS-3306
+     * See https://osgeo-org.atlassian.net/browse/GEOS-3306
      * 
      * @throws Exception
      */
@@ -170,7 +176,7 @@ public class DescribeFeatureTypeTest extends WFS20TestSupport {
     }
 
     /**
-     * See http://jira.codehaus.org/browse/GEOS-3306
+     * See https://osgeo-org.atlassian.net/browse/GEOS-3306
      * 
      * @throws Exception
      */
@@ -248,7 +254,7 @@ public class DescribeFeatureTypeTest extends WFS20TestSupport {
     }
     
     /**
-     * See http://jira.codehaus.org/browse/GEOS-3306
+     * See https://osgeo-org.atlassian.net/browse/GEOS-3306
      * 
      * @throws Exception
      */

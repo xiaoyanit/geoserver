@@ -1,11 +1,14 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
 package org.geoserver.wfs;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import javax.xml.namespace.QName;
 
@@ -26,6 +29,7 @@ import org.geoserver.wfs.request.Insert;
 import org.geoserver.wfs.request.Lock;
 import org.geoserver.wfs.request.LockFeatureRequest;
 import org.geoserver.wfs.request.Query;
+import org.geoserver.wfs.request.Replace;
 import org.geoserver.wfs.request.TransactionElement;
 import org.geoserver.wfs.request.TransactionRequest;
 import org.opengis.feature.Feature;
@@ -39,6 +43,71 @@ public class WFSWorkspaceQualifier extends WorkspaceQualifyingCallback {
 
     @Override
     protected void qualifyRequest(WorkspaceInfo workspace, LayerInfo layer, Service service, Request request) {
+        if (request.getContext() != null) {
+            // if a qualifying workspace exist, try to qualify the request typename
+            // parameter, if present
+            if (workspace != null && request.getKvp().containsKey("TYPENAME")) {
+                Iterable typeNames = (Iterable) request.getKvp().get("TYPENAME");
+                NamespaceInfo ns = catalog
+                        .getNamespaceByPrefix(workspace.getName());
+                if (ns != null) {
+                    List<QName> qualifiedNames = new ArrayList<QName>();
+                    for (Object name : typeNames) {
+                        if (name != null && name instanceof QName) {
+                            QName typeName = (QName) name;
+                            // no namespace specified, we can qualify
+                            if (typeName.getNamespaceURI() == null
+                                    || typeName.getNamespaceURI().equals("")) {
+                                typeName = new QName(ns.getURI(),
+                                        typeName.getLocalPart());
+                            } else if (typeName.getNamespaceURI().equals(
+                                    catalog.getDefaultNamespace().getURI())) {
+                                // more complex case, if we have the default
+                                // namespace, we have to check if it's been
+                                // specified on the request, or assigned by parser
+                                typeName = checkDefaultNamespace(request, ns,
+                                        typeName);
+                            }
+                            qualifiedNames.add(typeName);
+                        }
+                    }
+                    request.getKvp().put("TYPENAME", qualifiedNames);
+    
+                }
+            }
+        }
+    }
+
+    /**
+     * Checks if the typeName default namespace is present
+     * in the original request, or it has been overridden by
+     * parser. If it's been overridden we can qualify with
+     * the given namespace.
+     * 
+     * @param request
+     * @param ns
+     * @param typeName
+     * @return
+     */
+    private QName checkDefaultNamespace(Request request, NamespaceInfo ns,
+            QName typeName) {
+        Map<String, String[]> originalParams = request
+                .getHttpRequest().getParameterMap();
+        for (String paramName : originalParams.keySet()) {
+            if (paramName.equalsIgnoreCase("TYPENAME")) {
+                for (String originalTypeName : originalParams
+                        .get(paramName)) {
+                    if (originalTypeName.equals(typeName
+                            .getLocalPart())) {
+                        // the original typeName was not
+                        // qualified, we can qualify it
+                        typeName = new QName(ns.getURI(),
+                                typeName.getLocalPart());
+                    }
+                }
+            }
+        }
+        return typeName;
     }
     
     @Override
@@ -85,19 +154,38 @@ public class WFSWorkspaceQualifier extends WorkspaceQualifyingCallback {
                     Insert in = (Insert) el;
                     //in the insert case the objects are gt feature types which are not mutable
                     // so we just check them and throw an exception if a name does not match
-                    for (Iterator j = in.getFeatures().iterator(); j.hasNext(); ) {
-                        Feature f = (Feature) j.next();
-                        Name n = f.getType().getName();
-                        if (n.getNamespaceURI() != null && !ns.getURI().equals(n.getNamespaceURI())) {
-                            throw new WFSException(t, "No such feature type " + n);
-                        }
-                    }
+                    List features = in.getFeatures();
+                    ensureFeatureNamespaceUriMatches(features, ns, t);
+                }
+                else if(el instanceof Replace){
+                    Replace rep = (Replace) el;
+                    //in the replace case the objects are gt feature types which are not mutable
+                    // so we just check them and throw an exception if a name does not match
+                    List features = rep.getFeatures();
+                    ensureFeatureNamespaceUriMatches(features, ns, t);                	
                 }
                 else {
                     el.setTypeName(qualifyTypeName(el.getTypeName(), workspace, ns));
                 }
             }
         }
+    }
+
+    /**
+     * Iterates the given features and ensures their namespaceURI matches the given namespace
+     * @param features
+     * @param ns
+     * @param t
+     */
+	private void ensureFeatureNamespaceUriMatches(List features,
+            NamespaceInfo ns, TransactionRequest t) {
+	    for (Iterator j = features.iterator(); j.hasNext(); ) {
+	        Feature f = (Feature) j.next();
+	        Name n = f.getType().getName();
+	        if (n.getNamespaceURI() != null && !ns.getURI().equals(n.getNamespaceURI())) {
+	            throw new WFSException(t, "No such feature type " + n);
+	        }
+	    }
     }
     
     void qualifyTypeNames(List names, WorkspaceInfo ws, NamespaceInfo ns) {

@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014-2015 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -15,15 +16,16 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import javax.media.jai.PlanarImage;
-import javax.media.jai.RenderedOp;
 
 import org.geoserver.gwc.GWC;
 import org.geoserver.ows.Response;
 import org.geoserver.wms.WMSMapContent;
+import org.geoserver.wms.WebMap;
+import org.geoserver.wms.map.RawMap;
 import org.geoserver.wms.map.RenderedImageMap;
 import org.geoserver.wms.map.RenderedImageMapResponse;
 import org.geotools.geometry.jts.ReferencedEnvelope;
-import org.geotools.image.crop.GTCropDescriptor;
+import org.geotools.image.ImageWorker;
 import org.geotools.resources.i18n.ErrorKeys;
 import org.geotools.resources.i18n.Errors;
 import org.geowebcache.grid.BoundingBox;
@@ -35,7 +37,7 @@ import org.geowebcache.mime.MimeType;
 
 public class GeoServerMetaTile extends MetaTile {
 
-    private RenderedImageMap metaTileMap;
+    private WebMap metaTileMap;
 
     public GeoServerMetaTile(GridSubset gridSubset, MimeType responseFormat,
             FormatModifier formatModifier, long[] tileGridPosition, int metaX, int metaY,
@@ -44,9 +46,11 @@ public class GeoServerMetaTile extends MetaTile {
         super(gridSubset, responseFormat, formatModifier, tileGridPosition, metaX, metaY, gutter);
     }
 
-    public void setWebMap(RenderedImageMap webMap) {
+    public void setWebMap(WebMap webMap) {
         this.metaTileMap = webMap;
-        setImage(webMap.getImage());
+        if (webMap instanceof RenderedImageMap) {
+            setImage(((RenderedImageMap) webMap).getImage());
+        }
     }
 
     /**
@@ -62,10 +66,22 @@ public class GeoServerMetaTile extends MetaTile {
     public boolean writeTileToStream(final int tileIdx, Resource target) throws IOException {
 
         checkNotNull(metaTileMap, "webMap is not set");
+
+        if (metaTileMap instanceof RawMap) {
+            OutputStream outStream = target.getOutputStream();
+            try {
+                ((RawMap) metaTileMap).writeTo(outStream);
+            } finally {
+                outStream.close();
+            }
+            return true;
+        }
         if (!(metaTileMap instanceof RenderedImageMap)) {
             throw new IllegalArgumentException("Only RenderedImageMaps are supported so far: "
                     + metaTileMap.getClass().getName());
         }
+        
+        final RenderedImageMap metaTileMap = (RenderedImageMap) this.metaTileMap;
         final RenderedImageMapResponse mapEncoder;
         {
             final GWC mediator = GWC.get();
@@ -77,7 +93,7 @@ public class GeoServerMetaTile extends MetaTile {
         RenderedImage tile = metaTileMap.getImage();
         WMSMapContent tileContext = metaTileMap.getMapContext();
 
-        if (this.tiles.length > 1) {
+        if (this.tiles.length > 1 || (this.tiles.length == 1 && metaHasGutter())) {
             final Rectangle tileDim = this.tiles[tileIdx];
             tile = createTile(tileDim.x, tileDim.y, tileDim.width, tileDim.height);
             disposeLater(tile);
@@ -116,6 +132,24 @@ public class GeoServerMetaTile extends MetaTile {
     }
 
     /**
+     * Checks if this meta tile has a gutter, or not
+     * @return
+     */
+    private boolean metaHasGutter() {
+        if(this.gutter == null) {
+            return false;
+        }
+        
+        for (int element : gutter) {
+            if(element > 0) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /**
      * Overrides to use the same method to slice the tiles than {@code MetatileMapOutputFormat} so
      * the GeoServer settings such as use native accel are leveraged in the same way when calling
      * {@link RenderedImageMapResponse#formatImageOutputStream},
@@ -141,11 +175,10 @@ public class GeoServerMetaTile extends MetaTile {
         case 0:
             // do a crop, and then turn it into a buffered image so that we can release
             // the image chain
-            RenderedOp cropped = GTCropDescriptor
-                    .create(metaTileImage, Float.valueOf(x), Float.valueOf(y),
-                            Float.valueOf(tileWidth), Float.valueOf(tileHeight), NO_CACHE);
-            tile = cropped.getAsBufferedImage();
-            disposeLater(cropped);
+            ImageWorker w = new ImageWorker(metaTileImage);
+            w.crop(Float.valueOf(x), Float.valueOf(y), Float.valueOf(tileWidth), Float.valueOf(tileHeight));
+            tile = w.getBufferedImage();
+            disposeLater(w.getRenderedImage());
             break;
         case 1:
             final PlanarImage pImage = (PlanarImage) metaTileImage;

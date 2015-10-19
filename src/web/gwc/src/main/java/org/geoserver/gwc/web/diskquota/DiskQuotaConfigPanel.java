@@ -1,4 +1,5 @@
-/* Copyright (c) 2001 - 2013 OpenPlans - www.openplans.org. All rights reserved.
+/* (c) 2014 Open Source Geospatial Foundation - all rights reserved
+ * (c) 2001 - 2013 OpenPlans
  * This code is licensed under the GPL 2.0 license, available at the root
  * application directory.
  */
@@ -89,8 +90,6 @@ public class DiskQuotaConfigPanel extends Panel {
         addDiskQuotaIntegrationEnablement(diskQuotaConfigModel);
         
         addDiskQuotaStoreChooser(diskQuotaConfigModel, jdbcQuotaConfigModel);
-
-        addDiskBlockSizeConfig(diskQuotaConfigModel);
 
         addCleanUpFrequencyConfig(diskQuotaConfigModel);
 
@@ -307,16 +306,6 @@ public class DiskQuotaConfigPanel extends Panel {
                     params));
             add(new Label("cleanUpLastRun", lastRunModel));
         }
-    }
-
-    private void addDiskBlockSizeConfig(final IModel<DiskQuotaConfig> diskQuotaModel) {
-        IModel<Integer> blockSizeModel;
-        blockSizeModel = new PropertyModel<Integer>(diskQuotaModel, "diskBlockSize");
-        TextField<Integer> diskBlockSize = new TextField<Integer>("diskBlockSize", blockSizeModel);
-        diskBlockSize.setRequired(true);
-        diskBlockSize.add(new AttributeModifier("title", true, new StringResourceModel(
-                "DiskQuotaConfigPanel.diskBlockSize.title", (Component) null, null)));
-        add(diskBlockSize);
     }
 
     private void addDiskQuotaIntegrationEnablement(IModel<DiskQuotaConfig> diskQuotaModel) {
